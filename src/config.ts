@@ -14,7 +14,7 @@ export const MENU_CONFIG = {
   /** IANA time zone used to decide what "today" is. Olathe, KS is Central. */
   timeZone: "America/Chicago",
   /** Heading shown at the top of the page. */
-  schoolName: "School Lunch",
+  schoolName: "Black Bob Elementary",
 } as const;
 
 /** Order in which School Cafe's sections are rendered. */

@@ -62,9 +62,6 @@ function MenuPage() {
     <main>
       <header className="page-header">
         <h1>{MENU_CONFIG.schoolName}</h1>
-        <div className="sub">
-          {MENU_CONFIG.mealType} · Grade {grade}
-        </div>
       </header>
 
       <nav className="nav">
