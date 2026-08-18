@@ -17,16 +17,29 @@ export interface MenuItem {
 export type MenuSections = Record<string, MenuItem[]>;
 
 /**
- * Maps a "serve with" item's PEMenuItemId to the name(s) of the main item(s)
- * it's served together with — e.g. String Cheese -> ["WOW Butter Sandwich"].
+ * The result of resolving "served with" relationships, so accompaniments can be
+ * tucked under the main item they come with.
  */
-export type ServedWith = Record<number, string[]>;
+export interface Pairings {
+  /**
+   * Main item's PEMenuItemId -> names of the items served under it,
+   * e.g. { <WOW Butter Sandwich>: ["String Cheese"] }.
+   */
+  under: Record<number, string[]>;
+  /**
+   * PEMenuItemIds of accompaniments that were nested under a main, so they can
+   * be hidden from their own category (no double listing).
+   */
+  nestedIds: number[];
+}
 
 export interface MenuResult {
   menu: MenuSections | null;
-  servedWith: ServedWith;
+  pairings: Pairings;
   error: string | null;
 }
+
+const EMPTY_PAIRINGS: Pairings = { under: {}, nestedIds: [] };
 
 /** One row of the GetMenuItemsServedTogether response. */
 interface ServedTogetherRow {
@@ -56,7 +69,9 @@ export const getMenu = createServerFn({ method: "GET" })
   .inputValidator((data: { date: string; grade: string }) => data)
   .handler(async ({ data }): Promise<MenuResult> => {
     const date = parseISODate(data.date);
-    if (!date) return { menu: null, servedWith: {}, error: "Invalid date." };
+    if (!date) {
+      return { menu: null, pairings: EMPTY_PAIRINGS, error: "Invalid date." };
+    }
 
     const url = new URL(DAILY_MENU_URL);
     url.searchParams.set("SchoolId", MENU_CONFIG.schoolId);
@@ -71,17 +86,17 @@ export const getMenu = createServerFn({ method: "GET" })
       if (!res.ok) {
         return {
           menu: null,
-          servedWith: {},
+          pairings: EMPTY_PAIRINGS,
           error: `School Cafe returned HTTP ${res.status}.`,
         };
       }
       const menu = (await res.json()) as MenuSections;
-      const servedWith = await fetchServedWith(menu, data.grade);
-      return { menu, servedWith, error: null };
+      const pairings = await resolvePairings(menu, data.grade);
+      return { menu, pairings, error: null };
     } catch (e) {
       return {
         menu: null,
-        servedWith: {},
+        pairings: EMPTY_PAIRINGS,
         error: `Could not reach School Cafe: ${(e as Error).message}`,
       };
     }
@@ -89,48 +104,69 @@ export const getMenu = createServerFn({ method: "GET" })
 
 /**
  * For every item flagged HasServeWith, ask School Cafe which main item(s) it's
- * served together with. Failures for a single item are swallowed — a missing
- * pairing just means no note, never a broken page.
+ * served together with, and build a "tuck under the main" mapping. Failures for
+ * a single item are swallowed — a missing pairing just leaves the item in its
+ * own category rather than breaking the page.
  */
-async function fetchServedWith(
+async function resolvePairings(
   menu: MenuSections,
   grade: string,
-): Promise<ServedWith> {
-  const pairItems = Object.values(menu)
+): Promise<Pairings> {
+  const allItems = Object.values(menu)
     .flat()
-    .filter((item) => item?.HasServeWith);
+    .filter(Boolean);
+  const byPEItemId = new Map(allItems.map((item) => [item.PEMenuItemId, item]));
+  const accompaniments = allItems.filter((item) => item.HasServeWith);
 
-  const entries = await Promise.all(
-    pairItems.map(async (item): Promise<[number, string[]]> => {
-      try {
-        const url = new URL(SERVED_TOGETHER_URL);
-        url.searchParams.set("SchoolId", MENU_CONFIG.schoolId);
-        url.searchParams.set("PEMenuId", String(item.PEMenuId));
-        url.searchParams.set("PEMenuItemId", String(item.PEMenuItemId));
-        url.searchParams.set("Grade", grade);
-        url.searchParams.set("ServingSizeByGrade", "true");
-        url.searchParams.set("PersonId", "null");
-
-        const res = await fetch(url, { headers: REQUEST_HEADERS });
-        if (!res.ok) return [item.PEMenuItemId, []];
-
-        const rows = (await res.json()) as ServedTogetherRow[];
-        const ownName = (item.MenuItemDescription || "").trim();
-        // Distinct main-item names, preserving first-seen order, excluding the
-        // queried item itself in case a row echoes it back.
-        const names = [
-          ...new Set(
-            rows
-              .map((r) => (r.MenuItemDescription || "").trim())
-              .filter((name) => name && name !== ownName),
-          ),
-        ];
-        return [item.PEMenuItemId, names];
-      } catch {
-        return [item.PEMenuItemId, []];
-      }
-    }),
+  // Resolve each accompaniment's primary item id(s) in parallel...
+  const resolved = await Promise.all(
+    accompaniments.map(async (item) => ({
+      item,
+      primaryIds: await fetchPrimaryIds(item, grade),
+    })),
   );
 
-  return Object.fromEntries(entries.filter(([, names]) => names.length > 0));
+  // ...then fold into the mapping in menu order for deterministic output.
+  const under: Record<number, string[]> = {};
+  const nestedIds: number[] = [];
+  for (const { item, primaryIds } of resolved) {
+    // Keep only primaries that are actually present on today's menu and aren't
+    // the item itself.
+    const targets = primaryIds.filter(
+      (id) => id !== item.PEMenuItemId && byPEItemId.has(id),
+    );
+    if (targets.length === 0) continue;
+
+    const name = (item.MenuItemDescription || "").trim();
+    for (const primaryId of targets) {
+      (under[primaryId] ??= []).push(name);
+    }
+    nestedIds.push(item.PEMenuItemId);
+  }
+
+  return { under, nestedIds };
+}
+
+/** The PEMenuItemId(s) of the main item(s) an accompaniment is served with. */
+async function fetchPrimaryIds(
+  item: MenuItem,
+  grade: string,
+): Promise<number[]> {
+  try {
+    const url = new URL(SERVED_TOGETHER_URL);
+    url.searchParams.set("SchoolId", MENU_CONFIG.schoolId);
+    url.searchParams.set("PEMenuId", String(item.PEMenuId));
+    url.searchParams.set("PEMenuItemId", String(item.PEMenuItemId));
+    url.searchParams.set("Grade", grade);
+    url.searchParams.set("ServingSizeByGrade", "true");
+    url.searchParams.set("PersonId", "null");
+
+    const res = await fetch(url, { headers: REQUEST_HEADERS });
+    if (!res.ok) return [];
+
+    const rows = (await res.json()) as ServedTogetherRow[];
+    return [...new Set(rows.map((r) => r.PrimaryPEMenuItemId).filter(Boolean))];
+  } catch {
+    return [];
+  }
 }

@@ -149,11 +149,23 @@ li:last-child {
   font-size: 1.05rem;
 }
 
-.serve-with {
-  display: block;
+/* Accompaniments tucked under the main item they're served with. */
+.served-with {
+  margin: 6px 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+}
+
+.served-with li {
+  padding: 2px 0;
+  border-bottom: none;
   color: var(--muted);
-  font-size: 0.85rem;
-  margin-top: 2px;
+  font-size: 0.95rem;
+}
+
+.served-with li::before {
+  content: "+ ";
+  color: var(--accent);
 }
 
 .notice {

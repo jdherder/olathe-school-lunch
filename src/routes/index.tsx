@@ -6,7 +6,7 @@ import {
   getMenu,
   type MenuItem,
   type MenuSections,
-  type ServedWith,
+  type Pairings,
 } from "../lib/menu";
 
 interface MenuSearch {
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/")({
 });
 
 function MenuPage() {
-  const { menu, servedWith, error, date, grade } = Route.useLoaderData();
+  const { menu, pairings, error, date, grade } = Route.useLoaderData();
   const parsed = parseISODate(date)!;
   const today = todayIn(MENU_CONFIG.timeZone);
   const isToday = date === toISO(today);
@@ -96,7 +96,7 @@ function MenuPage() {
       {error ? (
         <div className="notice error">{error}</div>
       ) : (
-        <Sections menu={menu ?? {}} servedWith={servedWith} />
+        <Sections menu={menu ?? {}} pairings={pairings} />
       )}
 
       <footer className="page-footer">Data from School Cafe</footer>
@@ -106,20 +106,27 @@ function MenuPage() {
 
 function Sections({
   menu,
-  servedWith,
+  pairings,
 }: {
   menu: MenuSections;
-  servedWith: ServedWith;
+  pairings: Pairings;
 }) {
+  const nested = new Set(pairings.nestedIds);
   const keys = Object.keys(menu);
   const order = CATEGORY_ORDER as readonly string[];
   const ordered = [
     ...order.filter((c) => keys.includes(c)),
     ...keys.filter((k) => !order.includes(k)).sort(),
   ];
-  const sections = ordered.filter(
-    (cat) => Array.isArray(menu[cat]) && menu[cat].length > 0,
-  );
+
+  // Items shown in each category, with accompaniments nested under their main
+  // removed so they aren't listed twice.
+  const sections = ordered
+    .map((cat) => ({
+      cat,
+      items: (menu[cat] ?? []).filter((item) => !nested.has(item.PEMenuItemId)),
+    }))
+    .filter((s) => s.items.length > 0);
 
   if (sections.length === 0) {
     return (
@@ -132,12 +139,16 @@ function Sections({
 
   return (
     <>
-      {sections.map((cat) => (
+      {sections.map(({ cat, items }) => (
         <section className="cat" key={cat}>
           <h2>{prettyCategory(cat)}</h2>
           <ul>
-            {menu[cat].map((item, i) => (
-              <Item key={i} item={item} servedWith={servedWith} />
+            {items.map((item, i) => (
+              <Item
+                key={i}
+                item={item}
+                servedWith={pairings.under[item.PEMenuItemId] ?? []}
+              />
             ))}
           </ul>
         </section>
@@ -146,30 +157,21 @@ function Sections({
   );
 }
 
-function Item({
-  item,
-  servedWith,
-}: {
-  item: MenuItem;
-  servedWith: ServedWith;
-}) {
+function Item({ item, servedWith }: { item: MenuItem; servedWith: string[] }) {
   const name = (item.MenuItemDescription || "").trim();
-  const pairedWith = item.HasServeWith ? servedWith[item.PEMenuItemId] : null;
 
   return (
     <li>
       <span className="item-name">{name}</span>
-      {pairedWith && pairedWith.length > 0 && (
-        <span className="serve-with">with {formatList(pairedWith)}</span>
+      {servedWith.length > 0 && (
+        <ul className="served-with">
+          {servedWith.map((child, i) => (
+            <li key={i}>{child}</li>
+          ))}
+        </ul>
       )}
     </li>
   );
-}
-
-/** "A", "A & B", or "A, B & C". */
-function formatList(items: string[]): string {
-  if (items.length === 1) return items[0];
-  return `${items.slice(0, -1).join(", ")} & ${items[items.length - 1]}`;
 }
 
 function prettyCategory(cat: string): string {
