@@ -17,6 +17,10 @@ export const Route = createRootRoute({
         content: 'light dark',
       },
       {
+        name: 'theme-color',
+        content: '#b0141b',
+      },
+      {
         title: 'School Lunch',
       },
     ],
@@ -25,6 +29,11 @@ export const Route = createRootRoute({
         rel: 'stylesheet',
         href: appCss,
       },
+      { rel: 'icon', href: '/icon.svg', type: 'image/svg+xml' },
+      { rel: 'icon', href: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { rel: 'icon', href: '/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
     ],
   }),
   shellComponent: RootDocument,

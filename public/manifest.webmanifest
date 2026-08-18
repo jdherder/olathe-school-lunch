@@ -1,0 +1,13 @@
+{
+  "name": "Black Bob Elementary Lunch",
+  "short_name": "BBE Lunch",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#b0141b",
+  "theme_color": "#b0141b",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}
