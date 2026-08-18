@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "olathe-school-lunch",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-08-18",
+  "observability": {
+    "enabled": true
+  },
+  // Menu selection defaults. Override any of these per-request with query
+  // params (?grade=03&date=2026-08-18), or change the baked-in defaults here.
+  "vars": {
+    "SCHOOL_ID": "97db15b3-0aea-4bc9-a417-28376e1187be",
+    "SERVING_LINE": "Main Line",
+    "MEAL_TYPE": "Lunch",
+    "GRADE": "03",
+    "TIMEZONE": "America/Chicago",
+    "SCHOOL_NAME": "School Lunch"
+  }
+}

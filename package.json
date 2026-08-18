@@ -1,0 +1,16 @@
+{
+  "name": "olathe-school-lunch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Preselected School Cafe lunch menu viewer, deployed as a Cloudflare Worker",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20250101.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^4.0.0"
+  }
+}
