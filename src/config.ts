@@ -26,3 +26,6 @@ export const CATEGORY_ORDER = [
   "JUICE",
   "MILK",
 ] as const;
+
+/** Categories to hide from the page entirely. */
+export const HIDDEN_CATEGORIES: readonly string[] = ["JUICE", "MILK"];

@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
-import { CATEGORY_ORDER, MENU_CONFIG } from "../config";
+import { CATEGORY_ORDER, HIDDEN_CATEGORIES, MENU_CONFIG } from "../config";
 import { addDays, longDate, parseISODate, toISO, todayIn } from "../lib/date";
 import {
   getMenu,
@@ -109,7 +109,9 @@ function Sections({
   pairings: Pairings;
 }) {
   const nested = new Set(pairings.nestedIds);
-  const keys = Object.keys(menu);
+  const keys = Object.keys(menu).filter(
+    (k) => !HIDDEN_CATEGORIES.includes(k),
+  );
   const order = CATEGORY_ORDER as readonly string[];
   const ordered = [
     ...order.filter((c) => keys.includes(c)),
