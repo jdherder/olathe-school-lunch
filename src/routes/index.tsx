@@ -2,7 +2,12 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { CATEGORY_ORDER, MENU_CONFIG } from "../config";
 import { addDays, longDate, parseISODate, toISO, todayIn } from "../lib/date";
-import { getMenu, type MenuItem, type MenuSections } from "../lib/menu";
+import {
+  getMenu,
+  type MenuItem,
+  type MenuSections,
+  type ServedWith,
+} from "../lib/menu";
 
 interface MenuSearch {
   date?: string;
@@ -43,7 +48,7 @@ export const Route = createFileRoute("/")({
 });
 
 function MenuPage() {
-  const { menu, error, date, grade } = Route.useLoaderData();
+  const { menu, servedWith, error, date, grade } = Route.useLoaderData();
   const parsed = parseISODate(date)!;
   const today = todayIn(MENU_CONFIG.timeZone);
   const isToday = date === toISO(today);
@@ -91,7 +96,7 @@ function MenuPage() {
       {error ? (
         <div className="notice error">{error}</div>
       ) : (
-        <Sections menu={menu ?? {}} />
+        <Sections menu={menu ?? {}} servedWith={servedWith} />
       )}
 
       <footer className="page-footer">Data from School Cafe</footer>
@@ -99,7 +104,13 @@ function MenuPage() {
   );
 }
 
-function Sections({ menu }: { menu: MenuSections }) {
+function Sections({
+  menu,
+  servedWith,
+}: {
+  menu: MenuSections;
+  servedWith: ServedWith;
+}) {
   const keys = Object.keys(menu);
   const order = CATEGORY_ORDER as readonly string[];
   const ordered = [
@@ -126,7 +137,7 @@ function Sections({ menu }: { menu: MenuSections }) {
           <h2>{prettyCategory(cat)}</h2>
           <ul>
             {menu[cat].map((item, i) => (
-              <Item key={i} item={item} />
+              <Item key={i} item={item} servedWith={servedWith} />
             ))}
           </ul>
         </section>
@@ -135,27 +146,30 @@ function Sections({ menu }: { menu: MenuSections }) {
   );
 }
 
-function Item({ item }: { item: MenuItem }) {
+function Item({
+  item,
+  servedWith,
+}: {
+  item: MenuItem;
+  servedWith: ServedWith;
+}) {
   const name = (item.MenuItemDescription || "").trim();
-  const serving = (item.ServingSizeByGrade || item.DefaultServingSize || "").trim();
-  const allergen = (item.AllergenDisplay || "").trim();
-  const meta: string[] = [];
-  if (serving) meta.push(serving);
-  if (item.Calories > 0) meta.push(`${item.Calories} cal`);
+  const pairedWith = item.HasServeWith ? servedWith[item.PEMenuItemId] : null;
 
   return (
     <li>
-      <div className="item-name">{name}</div>
-      {meta.length > 0 && (
-        <div className="meta">
-          {meta.map((m, i) => (
-            <span key={i}>{m}</span>
-          ))}
-        </div>
+      <span className="item-name">{name}</span>
+      {pairedWith && pairedWith.length > 0 && (
+        <span className="serve-with">with {formatList(pairedWith)}</span>
       )}
-      {allergen && <div className="allergen">{allergen}</div>}
     </li>
   );
+}
+
+/** "A", "A & B", or "A, B & C". */
+function formatList(items: string[]): string {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} & ${items[items.length - 1]}`;
 }
 
 function prettyCategory(cat: string): string {
