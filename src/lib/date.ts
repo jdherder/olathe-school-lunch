@@ -70,6 +70,52 @@ export function longDate(d: DateParts): string {
   }).format(new Date(Date.UTC(d.year, d.month - 1, d.day)));
 }
 
+/** Day of week, 0 = Sunday … 6 = Saturday. */
+export function weekday(d: DateParts): number {
+  return new Date(Date.UTC(d.year, d.month - 1, d.day)).getUTCDay();
+}
+
+/** True for Saturday and Sunday — days with no school lunch. */
+export function isWeekend(d: DateParts): boolean {
+  const wd = weekday(d);
+  return wd === 0 || wd === 6;
+}
+
+/** The nearest weekday strictly before `d`, skipping Sat/Sun. */
+export function previousWeekday(d: DateParts): DateParts {
+  let r = addDays(d, -1);
+  while (isWeekend(r)) r = addDays(r, -1);
+  return r;
+}
+
+/** The nearest weekday strictly after `d`, skipping Sat/Sun. */
+export function nextWeekday(d: DateParts): DateParts {
+  let r = addDays(d, 1);
+  while (isWeekend(r)) r = addDays(r, 1);
+  return r;
+}
+
+/** Monday of the week containing `d`. */
+export function startOfWeekMonday(d: DateParts): DateParts {
+  const wd = weekday(d);
+  const diff = wd === 0 ? -6 : 1 - wd;
+  return addDays(d, diff);
+}
+
+/** The five weekdays (Mon–Fri) of the week containing `d`. */
+export function weekdaysOf(d: DateParts): DateParts[] {
+  const monday = startOfWeekMonday(d);
+  return [0, 1, 2, 3, 4].map((n) => addDays(monday, n));
+}
+
+/** Short weekday label, e.g. "Mon". */
+export function shortWeekday(d: DateParts): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+  }).format(new Date(Date.UTC(d.year, d.month - 1, d.day)));
+}
+
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
