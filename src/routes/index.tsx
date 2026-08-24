@@ -1,7 +1,16 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { CATEGORY_ORDER, HIDDEN_CATEGORIES, MENU_CONFIG } from "../config";
-import { addDays, longDate, parseISODate, toISO, todayIn } from "../lib/date";
+import {
+  longDate,
+  nextWeekday,
+  parseISODate,
+  previousWeekday,
+  shortWeekday,
+  toISO,
+  todayIn,
+  weekdaysOf,
+} from "../lib/date";
 import {
   getMenu,
   type MenuItem,
@@ -52,8 +61,10 @@ function MenuPage() {
   const parsed = parseISODate(date)!;
   const today = todayIn(MENU_CONFIG.timeZone);
   const isToday = date === toISO(today);
-  const prevISO = toISO(addDays(parsed, -1));
-  const nextISO = toISO(addDays(parsed, 1));
+  // Skip weekends: there's never school lunch on Sat/Sun.
+  const prevISO = toISO(previousWeekday(parsed));
+  const nextISO = toISO(nextWeekday(parsed));
+  const week = weekdaysOf(parsed);
 
   // Only carry ?grade in URLs when it differs from the configured default.
   const gradeSearch = grade === MENU_CONFIG.grade ? {} : { grade };
@@ -80,6 +91,29 @@ function MenuPage() {
         >
           Next ›
         </Link>
+      </nav>
+
+      <nav className="weekstrip" aria-label="Days this week">
+        {week.map((d) => {
+          const iso = toISO(d);
+          const isSelected = iso === date;
+          const isCurrent = iso === toISO(today);
+          return (
+            <Link
+              key={iso}
+              to="/"
+              search={{ date: iso, ...gradeSearch }}
+              className={`weekday${isSelected ? " selected" : ""}${
+                isCurrent ? " current" : ""
+              }`}
+              aria-label={longDate(d)}
+              aria-current={isSelected ? "date" : undefined}
+            >
+              <span className="wd-name">{shortWeekday(d)}</span>
+              <span className="wd-num">{d.day}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="today-row">

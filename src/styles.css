@@ -84,6 +84,54 @@ main {
   flex: 1;
 }
 
+.weekstrip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.weekstrip .weekday {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 0;
+}
+
+.weekstrip .wd-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.weekstrip .wd-num {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.weekstrip .weekday.current .wd-name {
+  color: var(--accent);
+}
+
+.weekstrip .weekday.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.weekstrip .weekday.selected .wd-name,
+.weekstrip .weekday.selected .wd-num {
+  color: #ffffff;
+}
+
 .today-row {
   text-align: center;
   margin-bottom: 18px;
